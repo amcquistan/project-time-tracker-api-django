@@ -1,0 +1,23 @@
+{% load i18n %}{% autoescape off %}
+{% if invitor %}
+  {% blocktrans %}
+  You have been invited to join {{ site_name }} by {{ invitor }}
+  {% endblocktrans %}
+{% else %}
+  {% blocktrans %}
+  You have recently signed up for {{ site_name }}
+  {% endblocktrans %}
+{% endif %}
+
+Your username is {{ user.get_username }}
+
+{% trans "Please go to the following page to activate your account and choose a new password:" %}
+{% block reset_link %}
+{{ protocol }}://{{ domain }}{% url 'account_activation' uidb64=uid token=token %}
+{% endblock %}
+
+{% trans "Thanks for using our site!" %}
+
+{% blocktrans %}The {{ site_name }} team{% endblocktrans %}
+
+{% endautoescape %}
