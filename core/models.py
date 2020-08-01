@@ -53,7 +53,7 @@ class Organization(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             # self.slug = slugify(self.name)
-            self.slug = make_object_slug_field(Organization, 'name', self.name)
+            self.slug = make_object_slug_field(Organization, self.name)
         return super().save(*args, **kwargs)
     
     def __str__(self):
@@ -71,7 +71,7 @@ class Project(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = make_object_slug_field(Organization, 'name', self.name)
+            self.slug = make_object_slug_field(Project, self.name)
         return super().save(*args, **kwargs)
     
     def __str__(self):
@@ -96,7 +96,7 @@ class ActivityEntry(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=255)
     slug = models.SlugField(null=False, unique=True)
-    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    contributor = models.ForeignKey(ProjectContributor, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     start = models.DateTimeField(null=True, blank=True)
     end = models.DateTimeField(null=True, blank=True)
@@ -104,7 +104,7 @@ class ActivityEntry(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = make_object_slug_field(Organization, 'name', self.name)
+            self.slug = make_object_slug_field(ActivityEntry, self.name)
         return super().save(*args, **kwargs)
 
     def __str__(self):

@@ -204,8 +204,30 @@ class ProjectContributorDetailAPIView(RetrieveUpdateDestroyAPIView):
 
 class ActivityEntryListCreateAPIView(ListCreateAPIView):
     serializer_class = ActivityEntrySerializer
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated, ActivityEntryPermission, )
+
+    def get_queryset(self):
+        project_slug = self.kwargs['project_slug']
+        qs = ActivityEntry.objects.all()
+        if self.request.user.is_staff:
+            return qs.filter(project__slug=project_slug)
+        
+        contributor = get_object_or_404(ProjectContributor,
+                                        project__slug=project_slug,
+                                        user=self.request.user)
+        if contributor.project_admin or contributor.activity_viewer:
+            return qs.filter(project=contributor.project)
+        
+        return qs.filter(project=contributor.project, contributor=contributor)
 
 
 class ActivityEntryDetailAPIVIew(RetrieveUpdateDestroyAPIView):
-    pass
+    serializer_class = ActivityEntrySerializer
+    permission_classes = (IsAuthenticated, ActivityEntryPermission, )
+
+    def get_object(self):
+        obj = get_object_or_404(ActivityEntry,
+                                project__slug=self.kwargs['project_slug'],
+                                slug=self.kwargs['activity_slug'])
+        self.check_object_permissions(self.request, obj)
+        return obj

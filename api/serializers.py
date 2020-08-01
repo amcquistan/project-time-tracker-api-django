@@ -173,4 +173,4 @@ class ProjectContributorSerializer(serializers.ModelSerializer):
 class ActivityEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivityEntry
-        fields = ('id', 'name', 'description', 'project', 'creator', 'start', 'end', 'minutes')
+        fields = ('id', 'name', 'description', 'project', 'contributor', 'start', 'end', 'minutes')

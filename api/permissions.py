@@ -109,126 +109,6 @@ class ProjectListPermission(BasePermission):
         return True
 
 
-
-
-# class IsAdminOrProjectViewer(BasePermission):
-#     '''Used for Viewing Project Lists and / or Project Detail
-#        - Admins has full access
-#        - Project Contributor with activity_viewer, activity_editor,
-#          or project_admin can view all for project
-#     '''
-#     def has_permission(self, request, view):
-#         if request.user.is_staff:
-#             return True
-        
-#         if request.method not in SAFE_METHODS:
-#             return False
-
-#         if 'project_slug' in view.kwargs:
-#             try:
-#                 contributor = ProjectContributor.objects.get(
-#                     project__slug=view.kwargs.get('project_slug'),
-#                     user=request.user)
-#             except ProjectContributor.DoesNotExist:
-#                 return False
-#             return contributor.activity_viewer or contributor.activity_editor or contributor.project_admin
-
-#         if 'org_slug' in view.kwargs:
-#             org_projects = Project.objects.filter(organization__slug=view.kwargs.get('org_slug')).all()
-#             project_contributors = ProjectContributor.objects.filter(
-#                     project__in=org_projects,
-#                     user=request.user).all()
-#             can_view = False
-#             for contrib in project_contributors:
-#                 if contrib.activity_viewer or contrib.project_admin:
-#                     can_view = True
-#                     break
-#             return can_view
-#         return True
-
-#     def has_object_permission(self, request, view, obj):
-#         if request.user.is_staff:
-#             return True
-        
-#         if request.method not in SAFE_METHODS:
-#             return False
-
-#         if isinstance(obj, ProjectContributor):
-#             if obj.user == request.user:
-#                 return True
-            
-#             project_contributor = ProjectContributor.objects.get(
-#                 project=obj.project,
-#                 user=request.user)
-#             return project_contributor.activity_viewer or project_contributor.project_admin
-
-#         if isinstance(obj, Project):
-#             project_contributor = ProjectContributor.objects.get(
-#                 project=obj,
-#                 user=request.user)
-#             return project_contributor.activity_viewer or project_contributor.project_admin
-
-#         return False
-
-# class IsAdminOrProjectContributor(IsAdminUser):
-#     '''Used for Creating and Editing Project or Project Contributor
-#        - Admins has full access
-#        - Project Contributor with project_admin
-#     '''
-#     def has_permission(self, request, view):
-#         if request.user.is_staff:
-#             return True
-
-#         # being used to list or create ProjectContributor or EntryActivity
-#         if 'project_slug' in view.kwargs:
-#             try:
-#                 contributor = ProjectContributor.objects.get(
-#                     project__slug=view.kwargs.get('project_slug'),
-#                     user=request.user)
-#             except ProjectContributor.DoesNotExist:
-#                 return False
-            
-#             if request.method in SAFE_METHODS:
-#                 return contributor.activity_viewer or contributor.activity_editor
-#             return contributor.project_admin
-
-#         if 'org_slug' in view.kwargs:
-#             org_projects = Project.objects.filter(organization__slug=view.kwargs.get('org_slug')).all()
-#             project_contributors = ProjectContributor.objects.filter(
-#                     project__in=org_projects,
-#                     user=request.user).all()
-#             can_view = False
-#             for contrib in project_contributors:
-#                 if contrib.activity_viewer or contrib.project_admin:
-#                     can_view = True
-#                     break
-#             return can_view
-#         return True
-
-#     def has_object_permission(self, request, view, obj):
-#         if request.user.is_staff:
-#             return True
-        
-#         if request.method not in SAFE_METHODS:
-#             return False
-
-#         if isinstance(obj, ProjectContributor):
-#             if obj.user == request.user:
-#                 return True
-            
-#             project_contributor = ProjectContributor.objects.get(
-#                 project=obj.project,
-#                 user=request.user)
-#             return project_contributor.activity_viewer or project_contributor.project_admin
-
-#         if isinstance(obj, Project):
-#             project_contributor = ProjectContributor.objects.get(
-#                 project=obj,
-#                 user=request.user)
-#             return project_contributor.activity_viewer or project_contributor.project_admin
-
-#         return False
-
 #################################################################################
 # Organization Permission
 #
@@ -328,10 +208,6 @@ class ProjectContributorPermission(BasePermission):
 # Activity Entry Permission
 #
 # Creating Activity Entry for a Project
-# - Can be done by Admin (User.is_staff) for any Project / User combo as long
-#   as the user is a project contributor
-# - Can be done by Project Admin (ProjectContributor.project_admin) for a project
-#   they are an admin for and a User as long as the user is a project contributor
 # - Can be done by Project Contributor with activity_editor permissions for a project
 #   they have activity_editor permission with
 # - return 404 if not admin or project contributor with activity_editor permission
@@ -362,8 +238,46 @@ class ProjectContributorPermission(BasePermission):
 # - Can be done by Project Contributor for which they are activity_editor for
 # - returns 403 if conditions are not met, 401 if unauthenticated
 class ActivityEntryPermission(BasePermission):
+    def get_project_contributor(self, user, project_slug):
+        return get_object_or_404(ProjectContributor,
+                                 user=user,
+                                 project__slug=project_slug)
+        
     def has_permission(self, request, view):
-        return True
+        if request.method == 'POST' and request.user.is_staff:
+            return False
+        
+        if request.user.is_staff:
+            return True
 
-    def has_object_permission(self, request, view):
-        return True
+        contributor = self.get_project_contributor(request.user,
+                                                  view.kwargs['project_slug'])
+
+        if request.method == 'POST':
+            # project admins can create a activity entry
+            if contributor.project_admin:
+                return False
+
+            # contributor's with editor perm can make their own activity entries
+            if contributor.activity_editor and request.data['contributor'] == contributor.id:
+                return True
+
+            return False
+
+        return contributor.project_admin or contributor.activity_viewer \
+                  or contributor.activity_editor
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_staff:
+            return True
+
+        contributor = self.get_project_contributor(request.user,
+                                                  view.kwargs['project_slug'])
+
+        if obj.creator == contributor.user or contributor.project_admin:
+            return True
+
+        if request.method == 'GET' and contributor.activity_viewer:
+            return True
+
+        return False

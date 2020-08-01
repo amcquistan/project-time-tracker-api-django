@@ -43,14 +43,12 @@ def send_activate_account_email(request, email,
     email_message.send()
 
 
-def make_object_slug_field(klass, field, slug_input):
+def make_object_slug_field(klass, slug_input):
     slug = slugify(slug_input)
     for i in range(2, 10000):
         try:
-            _ = klass.objects.get(**{field: slug})
-            j = '-{}'.format(i)
-            end = len(slug) - len(j)
-            slug = '{}{}'.format(slug[:end], j)
-        except ObjectDoesNotExist:
+            _ = klass.objects.get(slug=slug)
+            slug = '{}-{}'.format(slugify(slug_input), i)
+        except klass.DoesNotExist:
             break
     return slug
