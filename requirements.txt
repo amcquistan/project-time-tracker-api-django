@@ -1,0 +1,6 @@
+dj-rest-auth>=1.0.4,<1.1.0
+Django>=3.0.8,<3.1.0
+django-extensions>=3.0.3,<3.1.0
+djangorestframework>=3.11.0,<3.12.0
+djangorestframework-simplejwt>=4.4.0,<4.5.0
+python-dotenv>=0.14.0,<1.0.0
