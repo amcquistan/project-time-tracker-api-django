@@ -274,7 +274,7 @@ class ActivityEntryPermission(BasePermission):
         contributor = self.get_project_contributor(request.user,
                                                   view.kwargs['project_slug'])
 
-        if obj.creator == contributor.user or contributor.project_admin:
+        if obj.contributor == contributor or contributor.project_admin:
             return True
 
         if request.method == 'GET' and contributor.activity_viewer:

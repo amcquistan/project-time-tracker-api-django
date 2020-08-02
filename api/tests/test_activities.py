@@ -311,7 +311,6 @@ class ActivityEntryTests(TestCase):
         batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
         batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
 
-
         batman_client = APIClient()
         authenticate_jwt(batman_creds, batman_client)
 
@@ -429,7 +428,7 @@ class ActivityEntryTests(TestCase):
         project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
         project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
 
-        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_viewer=True)
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
         batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_viewer=True)
         batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
 
@@ -464,63 +463,538 @@ class ActivityEntryTests(TestCase):
     def test_view_activity_entry_by_project_admin_succeeds(self):
         '''Tests that a project admin (ProjectContributor.project_admin = True)
         can view an activity entry'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, project_admin=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='A new activity entry',
+            contributor=janedoe_contrib,
+            project=project1,
+            minutes=60
+        )
+
+        batman_client = APIClient()
+        authenticate_jwt(batman_creds, batman_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = batman_client.get(url, format='json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.data
+        self.assertIn('name', data)
+        self.assertIn('description', data)
+        self.assertIn('contributor', data)
+        self.assertIn('project', data)
+        self.assertIn('start', data)
+        self.assertIn('end', data)
+        self.assertIn('minutes', data)
 
     def test_view_activity_entry_by_activity_viewer_succeeds(self):
         '''Tests that an activity entry can be viewed by a user
         who is a project's contributor with activity_viewer permission'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_viewer=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='A new activity entry',
+            contributor=janedoe_contrib,
+            project=project1,
+            minutes=60
+        )
+
+        batman_client = APIClient()
+        authenticate_jwt(batman_creds, batman_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = batman_client.get(url, format='json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.data
+        self.assertIn('name', data)
+        self.assertIn('description', data)
+        self.assertIn('contributor', data)
+        self.assertIn('project', data)
+        self.assertIn('start', data)
+        self.assertIn('end', data)
+        self.assertIn('minutes', data)
 
     def test_view_activity_entry_by_activity_editor_succeeds(self):
         '''Tests that an activity entry can be viewed by the user
         with project contributor activity_editor for that activity entry'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_viewer=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='A new activity entry',
+            contributor=janedoe_contrib,
+            project=project1,
+            minutes=60
+        )
+
+        janedoe_client = APIClient()
+        authenticate_jwt(janedoe_creds, janedoe_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = janedoe_client.get(url, format='json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.data
+        self.assertIn('name', data)
+        self.assertIn('description', data)
+        self.assertIn('contributor', data)
+        self.assertIn('project', data)
+        self.assertIn('start', data)
+        self.assertIn('end', data)
+        self.assertIn('minutes', data)
 
     def test_view_activity_entry_by_non_contributor_fails(self):
         '''Tests that a activity entry cannot be viewed by a user
         who is not a project contributor for that entry's project'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_viewer=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='A new activity entry',
+            contributor=janedoe_contrib,
+            project=project1,
+            minutes=60
+        )
+
+        robin_client = APIClient()
+        authenticate_jwt(robin_creds, robin_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = robin_client.get(url, format='json')
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        data = response.data
+        self.assertNotIn('name', data)
+        self.assertNotIn('description', data)
+        self.assertNotIn('contributor', data)
+        self.assertNotIn('project', data)
+        self.assertNotIn('start', data)
+        self.assertNotIn('end', data)
+        self.assertNotIn('minutes', data)
 
     def test_update_activity_entry_by_admin_succeeds(self):
         '''Tests that a activity entry can be updated by an
         admin (User.is_staff = True)'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        admin_client = APIClient()
+        authenticate_jwt(admin_creds, admin_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        payload = {
+            'name': 'An Activity Update',
+            'description': 'Activity description updated',
+            'project': project1.id,
+            'contributor': janedoe_contrib.id,
+            'minutes': 120
+        }
+        response = admin_client.put(url, payload, format='json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.data
+        self.assertIn('name', data)
+        self.assertIn('description', data)
+        self.assertIn('contributor', data)
+        self.assertIn('project', data)
+        self.assertIn('start', data)
+        self.assertIn('end', data)
+        self.assertIn('minutes', data)
+
+        self.assertEqual(payload['name'], data['name'])
+        self.assertEqual(payload['description'], data['description'])
+        self.assertEqual(payload['contributor'], data['contributor'])
+        self.assertEqual(payload['project'], data['project'])
+        self.assertEqual(payload['minutes'], data['minutes'])
+        self.assertIsNone(data['start'])
+        self.assertIsNone(data['end'])
 
     def test_update_activity_entry_by_project_admin_succeeds(self):
         '''Tests that a activity entry can be updated by a user who is
         a project admin for the project associated with the activity entry'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        johndoe_client = APIClient()
+        authenticate_jwt(johndoe_creds, johndoe_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        payload = {
+            'name': 'An Activity Update',
+            'description': 'Activity description updated',
+            'project': project1.id,
+            'contributor': janedoe_contrib.id,
+            'minutes': 120
+        }
+        response = johndoe_client.put(url, payload, format='json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.data
+        self.assertIn('name', data)
+        self.assertIn('description', data)
+        self.assertIn('contributor', data)
+        self.assertIn('project', data)
+        self.assertIn('start', data)
+        self.assertIn('end', data)
+        self.assertIn('minutes', data)
+
+        self.assertEqual(payload['name'], data['name'])
+        self.assertEqual(payload['description'], data['description'])
+        self.assertEqual(payload['contributor'], data['contributor'])
+        self.assertEqual(payload['project'], data['project'])
+        self.assertEqual(payload['minutes'], data['minutes'])
+        self.assertIsNone(data['start'])
+        self.assertIsNone(data['end'])
 
     def test_update_activity_entry_by_activity_editor_succeeds(self):
         '''Tests that a activity entry can be updated by a user who is 
         a activity_editor for that activity entry'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        janedoe_client = APIClient()
+        authenticate_jwt(janedoe_creds, janedoe_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        payload = {
+            'name': 'An Activity Update',
+            'description': 'Activity description updated',
+            'project': project1.id,
+            'contributor': janedoe_contrib.id,
+            'minutes': 120
+        }
+        response = janedoe_client.put(url, payload, format='json')
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        data = response.data
+        self.assertIn('name', data)
+        self.assertIn('description', data)
+        self.assertIn('contributor', data)
+        self.assertIn('project', data)
+        self.assertIn('start', data)
+        self.assertIn('end', data)
+        self.assertIn('minutes', data)
+
+        self.assertEqual(payload['name'], data['name'])
+        self.assertEqual(payload['description'], data['description'])
+        self.assertEqual(payload['contributor'], data['contributor'])
+        self.assertEqual(payload['project'], data['project'])
+        self.assertEqual(payload['minutes'], data['minutes'])
+        self.assertIsNone(data['start'])
+        self.assertIsNone(data['end'])
 
     def test_update_activity_entry_by_non_contributor_fails(self):
         '''Tests that a activity entry cannot be updated by a user who is
         not a project contributor'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        robin_client = APIClient()
+        authenticate_jwt(robin_creds, robin_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        payload = {
+            'name': 'An Activity Update',
+            'description': 'Activity description updated',
+            'project': project1.id,
+            'contributor': janedoe_contrib.id,
+            'minutes': 120
+        }
+        response = robin_client.put(url, payload, format='json')
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        data = response.data
+        self.assertNotIn('name', data)
+        self.assertNotIn('description', data)
+        self.assertNotIn('contributor', data)
+        self.assertNotIn('project', data)
+        self.assertNotIn('start', data)
+        self.assertNotIn('end', data)
+        self.assertNotIn('minutes', data)
 
     def test_delete_activity_entry_by_admin_succeeds(self):
         '''Tests that a admin can delete an activity entry'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        admin_client = APIClient()
+        authenticate_jwt(admin_creds, admin_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = admin_client.delete(url, format='json')
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        with self.assertRaises(ActivityEntry.DoesNotExist):
+            ActivityEntry.objects.get(pk=ae.pk)
 
     def test_delete_activity_entry_by_project_admin_succeeds(self):
         '''Tests that a project admin can delete an activity associated with
         the project they are an admin for'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        johndoe_client = APIClient()
+        authenticate_jwt(johndoe_creds, johndoe_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = johndoe_client.delete(url, format='json')
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        with self.assertRaises(ActivityEntry.DoesNotExist):
+            ActivityEntry.objects.get(pk=ae.pk)
 
     def test_delete_activity_entry_by_activity_editor_succeeds(self):
         '''Tests that a activity entry can be deleted by a project
         contributor who is an activity editor for that activity entry'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_editor=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        janedoe_client = APIClient()
+        authenticate_jwt(janedoe_creds, janedoe_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = janedoe_client.delete(url, format='json')
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        with self.assertRaises(ActivityEntry.DoesNotExist):
+            ActivityEntry.objects.get(pk=ae.pk)
 
     def test_delete_activity_entry_by_activity_viewer_fails(self):
         '''Tests that a activity entry cannot be deleted by a project
         contributor who is an activity viewer for that activity'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_viewer=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        batman_client = APIClient()
+        authenticate_jwt(batman_creds, batman_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = batman_client.delete(url, format='json')
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+        self.assertIsNotNone(ActivityEntry.objects.get(pk=ae.pk))
 
     def test_delete_activity_entry_by_non_contributor_fails(self):
         '''Tests that a activity entry cannot be deleted by a 
         non-project-contributor'''
-        pass
+        robin_user = robin_creds.create_user(is_active=True)
+        org1 = create_organization('Org 1', self.johndoe_user)
+        project1 = create_project('Org 1 Project 1', 'abc', self.johndoe_user, org1)
+        project2 = create_project('Org 1 Project 2', 'abc', self.johndoe_user, org1)
+
+        janedoe_contrib = ProjectContributor.objects.create(user=self.janedoe_user, project=project1, activity_editor=True)
+        batman_proj1_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project1, activity_viewer=True)
+        batman_proj2_contrib = ProjectContributor.objects.create(user=self.batman_user, project=project2, activity_editor=True)
+
+        ae = ActivityEntry.objects.create(
+            name='An Activity',
+            description='An activity description',
+            project=project1,
+            contributor=janedoe_contrib,
+            minutes=60
+        )
+
+        robin_client = APIClient()
+        authenticate_jwt(robin_creds, robin_client)
+
+        url = reverse(self.detail_view_name, kwargs={
+            'org_slug': org1.slug,
+            'project_slug': project1.slug,
+            'activity_slug': ae.slug
+        })
+        response = robin_client.delete(url, format='json')
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+        self.assertIsNotNone(ActivityEntry.objects.get(pk=ae.pk))
